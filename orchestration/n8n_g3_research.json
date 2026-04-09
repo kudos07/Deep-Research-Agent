@@ -1,5 +1,5 @@
 {
-  "name": "G3 Research Agent (Gemini core + FastAPI)",
+  "name": "G3 Research Agent (Mistral core + FastAPI)",
   "nodes": [
     {
       "parameters": {
@@ -21,7 +21,7 @@
         "url": "=http://host.docker.internal:8000/research",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"question\": $json.body.question,\n  \"mock_tools\": $json.body.mock_tools\n}",
+        "jsonBody": "={\n  \"question\": $json.body?.question ?? $json.question,\n  \"mock_tools\": $json.body?.mock_tools ?? $json.mock_tools ?? false\n}",
         "options": {
           "timeout": 300000
         }
