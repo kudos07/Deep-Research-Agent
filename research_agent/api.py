@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from research_agent.agent import run_research
@@ -15,6 +19,19 @@ load_dotenv()
 
 app = FastAPI(title="G3 Research Agent API", version="0.2.0")
 
+# Lets the static site (or any local dev server) call POST /research from the browser.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+_WEBSITE_DIR = Path(__file__).resolve().parent.parent / "website"
+if _WEBSITE_DIR.is_dir():
+    app.mount("/ui", StaticFiles(directory=str(_WEBSITE_DIR), html=True), name="ui")
+
 
 class ResearchBody(BaseModel):
     question: str = Field(min_length=3)
@@ -22,6 +39,13 @@ class ResearchBody(BaseModel):
     max_context_tokens_per_llm_call: int | None = None
     max_session_memory_tokens: int | None = None
     max_cost_usd_per_session: float | None = None
+
+
+@app.get("/")
+def root():
+    if _WEBSITE_DIR.is_dir():
+        return RedirectResponse(url="/ui/", status_code=302)
+    return {"ok": True, "message": "G3 Research Agent API", "docs": "/docs", "research": "POST /research"}
 
 
 @app.get("/health")

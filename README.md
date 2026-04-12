@@ -81,6 +81,30 @@ This offline mode is designed for reviewer reproducibility: it still exercises d
 
 You can also set `RESEARCH_USE_MOCK_TOOLS=1` in `.env`, or pass `--mock-tools` on the CLI (preferred; avoids global env side effects).
 
+## Web UI (browser)
+
+With the API running, open **`http://127.0.0.1:8000/ui/`** (or **`http://127.0.0.1:8000/`**, which redirects to `/ui/`). The static site under `website/` is mounted by FastAPI so you get a short product overview plus an interactive **Try it** form: enter a question, optionally use **Mock tools** (no API key), and inspect the structured answer, sub-questions, retrieval metadata, and JSON.
+
+Screenshots (stored in `docs/screenshots/`):
+
+**Landing**
+
+![G3 Research Agent landing page](docs/screenshots/web-hero.png)
+
+**Try it — API base, `/health` status, question, mock tools**
+
+![Try it form with API health check](docs/screenshots/web-try-form.png)
+
+**Answer — executive summary, evidence cites, session metrics**
+
+![Research answer with evidence and metrics](docs/screenshots/web-answer.png)
+
+**Explainability — decomposition and selected evidence chunks**
+
+![Sub-questions and selected evidence table](docs/screenshots/web-subquestions-evidence.png)
+
+If you open the HTML from a static server only (e.g. another port), set **API base URL** to the uvicorn address (`http://127.0.0.1:8000` by default); the static server itself cannot handle `POST /research`.
+
 ## n8n workflow + API
 
 1. Start the HTTP service (same Python venv):
@@ -97,6 +121,8 @@ uvicorn research_agent.api:app --host 0.0.0.0 --port 8000
 
 **Dify (alternative):** add an **HTTP Request** / tool that `POST`s the same JSON body to `/research`.
 
+**Web UI:** with the same server running, use **`http://127.0.0.1:8000/ui/`** for the browser experience shown in [Web UI (browser)](#web-ui-browser).
+
 ## Self-assessment (rubric alignment)
 
 - **Technical execution:** The end-to-end path works offline with `--mock-tools`; live mode depends on network + provider availability. Errors in search/fetch return empty/partial evidence rather than crashing the loop.
@@ -111,6 +137,8 @@ uvicorn research_agent.api:app --host 0.0.0.0 --port 8000
 
 ## Files
 
+- `website/` - static web UI (`index.html`, `styles.css`, `app.js`); served at **`/ui/`** when using `research_agent.api:app`
+- `docs/screenshots/` - figures for this README (web UI screenshots)
 - `research_agent/agent.py` - orchestration loop + session ledger
 - `research_agent/mistral_tooling.py` - Mistral tool calling (`web_search`, `fetch_url`)
 - `research_agent/memory.py` - episodic store, compaction, budgeted selection

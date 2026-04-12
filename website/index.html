@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="G3 Deep Research Agent: bounded memory, Mistral tool use, BM25 retrieval, FastAPI and n8n integration."
+    />
+    <title>G3 Research Agent — Product overview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-nav">
+      <a class="site-nav__brand" href="#">G3 Research Agent</a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">Menu</button>
+      <ul class="site-nav__links" id="nav-menu">
+        <li><a href="#why">Why it matters</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#stack">Stack</a></li>
+        <li><a href="#try">Try it</a></li>
+        <li><a href="#constraints">Budgets</a></li>
+        <li><a href="#run">Run it</a></li>
+        <li><a href="#tradeoffs">Trade-offs</a></li>
+      </ul>
+    </header>
+
+    <main>
+      <section class="hero wrap" id="top">
+        <p class="hero__badge">Assignment G3 prototype</p>
+        <h1>Research that stays inside the lines</h1>
+        <p class="hero__sub">
+          A multi-step agent that decomposes questions, gathers web evidence, stores it in bounded memory, compacts when
+          needed, and answers with budgeted retrieval—so cost and context stay predictable.
+        </p>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="#try">Run a query</a>
+          <a class="btn btn--ghost" href="#run">CLI &amp; API notes</a>
+        </div>
+      </section>
+
+      <section class="wrap" id="why">
+        <h2 class="section__title">Why this design</h2>
+        <p class="section__lead">
+          Client value is less “more text” and more governed research: predictable cost, bounded context, and
+          traceability. The prototype makes budgets and retrieval explicit so you can see which evidence reached the
+          final answer.
+        </p>
+        <div class="cards">
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">◎</div>
+            <h3>Declared budgets</h3>
+            <p>
+              Caps on injected context and session memory are first-class. Optional USD ceilings stop sessions early when
+              estimated spend crosses a limit.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">↗</div>
+            <h3>Traceable evidence</h3>
+            <p>
+              Structured output includes which memory chunks were selected for synthesis—so reviewers can connect
+              behavior to governance, not guesswork.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">◇</div>
+            <h3>Built for ops</h3>
+            <p>
+              Same research policy runs in Python whether you trigger it from the CLI, FastAPI, or an n8n webhook—so
+              constraints stay centralized.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="wrap" id="how">
+        <h2 class="section__title">How it works</h2>
+        <p class="section__lead">
+          Each complex question is split into sub-questions. For each one, the model uses tools (<code>web_search</code>,
+          <code>fetch_url</code>), writes observations into episodic memory, optionally summarizes when the store grows
+          too large, then packs the best-ranked chunks into a fixed budget for the final answer.
+        </p>
+        <div class="cards">
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">1</div>
+            <h3>Decompose</h3>
+            <p>The LLM breaks the user question into focused sub-questions so research stays scoped and repeatable.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">2</div>
+            <h3>Collect</h3>
+            <p>Mistral tool calling drives search and page fetch loops per sub-question, with mock mode for offline demos.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">3</div>
+            <h3>Remember (bounded)</h3>
+            <p>Observations land in an episodic buffer with token estimates; compaction merges older rows when limits hit.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">4</div>
+            <h3>Retrieve</h3>
+            <p>BM25 ranks chunks; greedy packing fills <code>max_context_tokens_per_llm_call</code> before synthesis.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">5</div>
+            <h3>Answer</h3>
+            <p>Final generation cites chunk labels and respects the injection cap—reducing attention dilution and runaway cost.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="wrap" id="stack">
+        <h2 class="section__title">What ships (brief alignment)</h2>
+        <p class="section__lead">The repo matches the G3 brief: Mistral + tools, explicit memory policy, and workflow hooks.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Brief item</th>
+                <th>Implementation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>LLM + tool use</td>
+                <td>Mistral via <code>mistralai</code>, tool calling for <code>web_search</code> and <code>fetch_url</code> (<code>research_agent/mistral_tooling.py</code>)</td>
+              </tr>
+              <tr>
+                <td>Memory</td>
+                <td>Episodic buffer, summarization cascade, BM25 + budgeted packing (<code>research_agent/memory.py</code>)</td>
+              </tr>
+              <tr>
+                <td>Constraints</td>
+                <td>Self-defined caps in <code>research_agent/config.py</code> (context budget, session memory, optional USD)</td>
+              </tr>
+              <tr>
+                <td>Workflow</td>
+                <td>n8n imports <code>orchestration/n8n_g3_research.json</code> → webhook → <code>POST /research</code> on FastAPI</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="wrap" id="try">
+        <h2 class="section__title">Try it in the browser</h2>
+        <p class="section__lead">
+          Start the API from the repo root (<code>uvicorn research_agent.api:app --host 0.0.0.0 --port 8000</code>), then open
+          <strong><code>http://127.0.0.1:8000/ui/</code></strong> so this page and <code>POST /research</code> share the same origin.
+          Use <strong>Mock tools</strong> for a full pipeline demo without API keys; turn it off when <code>MISTRAL_API_KEY</code> is set.
+        </p>
+
+        <form id="research-form" class="research-form">
+          <label class="field">
+            <span class="field__label">API base URL</span>
+            <input
+              class="field__input"
+              type="url"
+              name="api_base"
+              id="api-base"
+              placeholder="http://127.0.0.1:8000"
+              autocomplete="off"
+            />
+            <span class="field__hint"
+              >Must be the FastAPI server (uvicorn, usually port <strong>8000</strong>), not the port where you opened this HTML file.</span>
+            <p class="api-health api-health--pending" id="api-health" aria-live="polite">Checking API…</p>
+            <button type="button" class="btn btn--ghost btn--small" id="api-health-retry">Test connection</button>
+          </label>
+          <label class="field">
+            <span class="field__label">Your question</span>
+            <textarea
+              class="field__textarea"
+              name="question"
+              id="research-question"
+              required
+              minlength="3"
+              rows="5"
+              placeholder="e.g. Compare two approaches to X and note one risk for each."
+            ></textarea>
+          </label>
+          <label class="field field--inline">
+            <input type="checkbox" name="mock_tools" id="mock-tools" checked />
+            <span>Mock tools (no live search; no API key required)</span>
+          </label>
+          <div class="research-form__actions">
+            <button type="submit" class="btn btn--primary" id="research-submit">Run research</button>
+            <span class="research-form__hint" id="research-status" aria-live="polite"></span>
+          </div>
+        </form>
+
+        <p class="research-error" id="research-error" hidden></p>
+
+        <div class="research-out" id="research-output" hidden>
+          <div class="research-out__hero">
+            <h3 class="research-out__title">Answer</h3>
+            <div class="research-out__answer" id="out-answer"></div>
+          </div>
+          <dl class="research-meta" id="out-meta"></dl>
+
+          <h3 class="research-out__subtitle">Sub-questions</h3>
+          <ol class="research-list" id="out-subqs"></ol>
+
+          <h3 class="research-out__subtitle">Selected evidence</h3>
+          <div class="table-wrap research-table-wrap">
+            <table id="out-evidence">
+              <thead>
+                <tr>
+                  <th>Chunk</th>
+                  <th>Kind</th>
+                  <th>Step</th>
+                  <th>Tokens</th>
+                  <th>Link</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="tabs out-tabs">
+            <ul class="tabs__list" role="tablist">
+              <li><button type="button" role="tab" data-tab="out-tab-json" aria-selected="true">Full JSON</button></li>
+              <li><button type="button" role="tab" data-tab="out-tab-steps" aria-selected="false">Execution steps</button></li>
+            </ul>
+            <div id="out-tab-json" class="tab-panel is-active" role="tabpanel">
+              <div class="code-block">
+                <button type="button" class="copy-btn">Copy</button>
+                <pre id="out-json"></pre>
+              </div>
+            </div>
+            <div id="out-tab-steps" class="tab-panel" role="tabpanel">
+              <div class="code-block">
+                <button type="button" class="copy-btn">Copy</button>
+                <pre id="out-steps"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap" id="constraints">
+        <h2 class="section__title">Budgets you can reason about</h2>
+        <p class="section__lead">
+          Defaults live in <code>research_agent/config.py</code> and are discussed in <code>evaluation.md</code>. Token counts use
+          tiktoken when available, otherwise a documented character heuristic.
+        </p>
+        <div class="cards">
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">λ</div>
+            <h3><code>max_context_tokens_per_llm_call</code></h3>
+            <p>Hard cap on how much retrieved memory is injected into the final synthesis prompt (default 2000 estimate units).</p>
+          </article>
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">Σ</div>
+            <h3><code>max_session_memory_tokens</code></h3>
+            <p>When the raw episodic store exceeds this (default 8000), a summarization cascade merges older observations.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon" aria-hidden="true">$</div>
+            <h3><code>max_cost_usd_per_session</code></h3>
+            <p>Optional: stop early when estimated spend crosses a ceiling (requires price environment variables).</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="wrap" id="run">
+        <h2 class="section__title">Run it</h2>
+        <p class="section__lead">
+          Use the CLI for quick demos, or run the API for n8n, Dify, or this site at <code>/ui/</code>. Mock mode exercises the full
+          loop without API keys.
+        </p>
+
+        <div class="tabs">
+          <ul class="tabs__list" role="tablist">
+            <li><button type="button" role="tab" data-tab="tab-cli" aria-selected="true">CLI</button></li>
+            <li><button type="button" role="tab" data-tab="tab-api" aria-selected="false">FastAPI</button></li>
+            <li><button type="button" role="tab" data-tab="tab-n8n" aria-selected="false">n8n</button></li>
+          </ul>
+          <div id="tab-cli" class="tab-panel is-active" role="tabpanel">
+            <div class="code-block">
+              <button type="button" class="copy-btn">Copy</button>
+              <pre>python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+# Set MISTRAL_API_KEY in .env for live mode
+
+python -m research_agent demo --mock-tools --pretty
+python -m research_agent run "Your multi-part question..." --pretty</pre>
+            </div>
+          </div>
+          <div id="tab-api" class="tab-panel" role="tabpanel">
+            <div class="code-block">
+              <button type="button" class="copy-btn">Copy</button>
+              <pre>uvicorn research_agent.api:app --host 0.0.0.0 --port 8000
+
+# Web UI (same origin as the API — recommended)
+# http://127.0.0.1:8000/ui/
+
+# POST /research
+# {"question":"...","mock_tools":false}
+# Optional overrides: max_context_tokens_per_llm_call, max_session_memory_tokens, max_cost_usd_per_session
+
+curl -s http://127.0.0.1:8000/health</pre>
+            </div>
+          </div>
+          <div id="tab-n8n" class="tab-panel" role="tabpanel">
+            <div class="code-block">
+              <button type="button" class="copy-btn">Copy</button>
+              <pre>1. Start FastAPI (see FastAPI tab).
+2. n8n: Import from File → orchestration/n8n_g3_research.json
+3. HTTP Request node base URL examples:
+   - Docker Desktop: http://host.docker.internal:8000/research
+   - All on host: http://127.0.0.1:8000/research
+4. Webhook JSON: {"question":"...","mock_tools":false}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap" id="tradeoffs">
+        <h2 class="section__title">Honest trade-offs</h2>
+        <p class="section__lead">
+          The system prefers operational clarity over embedding-heavy RAG for short, noisy web snippets. Summaries can drop
+          rare details; BM25 is weaker on paraphrase than vectors—but budgets stay legible.
+        </p>
+        <div class="trade-grid">
+          <div class="trade-item">
+            <strong>Budgeted packing</strong>
+            <p>Upside: respects a hard injection cap. Downside: greedy packing is not globally optimal.</p>
+          </div>
+          <div class="trade-item">
+            <strong>BM25 retrieval</strong>
+            <p>Upside: local, cheap, predictable. Downside: synonyms and paraphrase can rank poorly vs embeddings.</p>
+          </div>
+          <div class="trade-item">
+            <strong>Summarization cascade</strong>
+            <p>Upside: long sessions stay bounded. Downside: compression can lose nuance if the model over-merges.</p>
+          </div>
+          <div class="trade-item">
+            <strong>Mock tools mode</strong>
+            <p>Upside: reproducible demos without credentials. Downside: not a substitute for live search quality.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        G3 — Deep Research Agent under Memory Constraints · Source and full docs in the repository
+        <code>README.md</code> and <code>evaluation.md</code>
+      </p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
